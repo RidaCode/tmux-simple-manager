@@ -52,29 +52,28 @@ bind c command-prompt \
 # APPEARANCE
 # ==================================================
 
-# Dark status bar
-set -g status-style "bg=colour234,fg=colour250"
+# Overall status bar background and default text color
+set -g status-style "bg=colour234,fg=colour240"
 
-# Current session
+# Left side: current session name
 set -g status-left \
-  "#[bg=colour31,fg=colour231,bold] SESSION: #S #[bg=colour234,fg=colour240] | "
+  "#[fg=colour241] SESSION: #S #[fg=colour237] | "
 
+# Maximum width of the left section
 set -g status-left-length 30
 
-# Inactive windows
+# Inactive windows: keep them very dim
 setw -g window-status-format \
-  "#[fg=colour245] #I:#W "
+  "#[fg=colour238] #I:#W "
 
-# Current window
+# Active window: slightly brighter so it is still easy to find
 setw -g window-status-current-format \
-  "#[bg=colour81,fg=colour234,bold] #I:#W* #[bg=colour234]"
+  "#[fg=colour245] #I:#W* "
 
-# Shortcuts + clock
+# Right side: shortcut reminders and clock
+# Keep shortcut text dim, with the clock slightly brighter
 set -g status-right \
-  "#[fg=colour244]s:sessions  C:new-session  c:new-window  ,:rename  &:kill #[fg=colour250] %H:%M "
+  "#[fg=colour238]s:sessions  C:new-session  c:new-window  ,:rename  &:kill #[fg=colour242] %H:%M "
 
+# Maximum width of the right section
 set -g status-right-length 70
-
-# Pane borders
-set -g pane-border-style "fg=colour238"
-set -g pane-active-border-style "fg=colour81"
