@@ -6,7 +6,7 @@ tmux's default keybindings wherever possible.
 ## Features
 
 - Clear session and window status
-- Interactive session manager
+- Interactive session and window tree
 - Create, rename, switch and delete sessions
 - Create and manage windows using familiar tmux defaults
 - Vim-style copy mode
@@ -29,10 +29,12 @@ tmux's default keybindings wherever possible.
 
 Inside the session manager:
 
-- `Enter` - switch
-- `Ctrl+n` - create
-- `Ctrl+r` - rename
-- `Ctrl+x` - delete
+- `Enter` - switch to the selected session or window
+- `Tab` - select/deselect multiple sessions or windows
+- `Shift+Tab` - select/deselect and move up
+- `Ctrl+n` - create session
+- `Ctrl+r` - rename one session or window
+- `Ctrl+x` - delete the selected session(s) and window(s)
 - `Esc` - close
 
 ### Windows
