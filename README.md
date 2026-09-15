@@ -11,7 +11,7 @@ tmux's default keybindings wherever possible.
 - Create and manage windows using familiar tmux defaults
 - Vim-style copy mode
 - Wayland clipboard support
-- Minimal, readable status bar
+- Minimal status bar with contextual prefix shortcuts
 
 ## Requirements
 

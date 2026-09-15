@@ -70,10 +70,11 @@ setw -g window-status-format \
 setw -g window-status-current-format \
   "#[fg=colour245] #I:#W* "
 
-# Right side: shortcut reminders and clock
-# Keep shortcut text dim, with the clock slightly brighter
+# Right side: compact prefix hint.
+# Show available shortcuts only while Ctrl+b is active.
 set -g status-right \
-  "#[fg=colour238]s:sessions  C:new-session  c:new-window  ,:rename  &:kill #[fg=colour242] %H:%M "
+  "#{?client_prefix,#[fg=colour238]s:sessions C:new-session c:new-window #,:rename &:kill ,#[fg=colour238]CTRL+B Tmux }"
 
+set -g status-right-length 55
 # Maximum width of the right section
 set -g status-right-length 70
