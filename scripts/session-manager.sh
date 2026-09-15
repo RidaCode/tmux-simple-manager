@@ -3,6 +3,11 @@
 CLIENT="$(tmux display-message -p '#{client_name}')"
 TAB=$'\t'
 
+pause_message() {
+	printf '%s Press Enter to continue.' "$1"
+	IFS= read -r
+}
+
 build_tree() {
 	local current_session current_window_id
 
@@ -87,6 +92,119 @@ delete_selected() {
 	done
 }
 
+choose_destination_session() {
+	local choice
+
+	choice="$({
+		printf 'new\t-\t+ New session\n'
+		tmux list-sessions -F "existing${TAB}#{session_name}${TAB}#{session_name}"
+	} | fzf \
+		--reverse \
+		--cycle \
+		--border \
+		--no-sort \
+		--delimiter="$TAB" \
+		--with-nth=3.. \
+		--prompt='MOVE TO > ' \
+		--header='ENTER choose destination   ESC cancel')" || return 1
+
+	printf '%s\n' "$choice"
+}
+
+create_destination_session() {
+	local name created
+
+	NEW_DESTINATION_SESSION=""
+	NEW_DESTINATION_PLACEHOLDER=""
+
+	printf 'New destination session name [blank = auto]: '
+	IFS= read -r name
+
+	if [[ -n "$name" ]] && tmux has-session -t "=$name" 2>/dev/null; then
+		pause_message "Session \"$name\" already exists."
+		return 1
+	fi
+
+	if [[ -n "$name" ]]; then
+		created="$(
+			tmux new-session -d -P \
+				-F "#{session_name}${TAB}#{window_id}" \
+				-s "$name"
+		)" || return 1
+	else
+		created="$(
+			tmux new-session -d -P \
+				-F "#{session_name}${TAB}#{window_id}"
+		)" || return 1
+	fi
+
+	IFS="$TAB" read -r NEW_DESTINATION_SESSION NEW_DESTINATION_PLACEHOLDER <<<"$created"
+}
+
+move_selected() {
+	local -a selected_lines=("$@")
+	local -A windows=()
+	local -A source_sessions=()
+	local line type session window_id _
+
+	for line in "${selected_lines[@]}"; do
+		IFS="$TAB" read -r type session window_id _ <<<"$line"
+
+		if [[ "$type" == "window" ]]; then
+			windows["$window_id"]=1
+			source_sessions["$window_id"]="$session"
+		fi
+	done
+
+	if ((${#windows[@]} == 0)); then
+		pause_message 'Move works on window rows. Select one or more windows.'
+		return
+	fi
+
+	local destination_choice destination_type destination placeholder_window
+	destination_choice="$(choose_destination_session)" || return
+	IFS="$TAB" read -r destination_type destination _ <<<"$destination_choice"
+
+	if [[ "$destination_type" == "new" ]]; then
+		create_destination_session || return
+		destination="$NEW_DESTINATION_SESSION"
+		placeholder_window="$NEW_DESTINATION_PLACEHOLDER"
+	fi
+
+	local moved_count=0
+	local skipped_count=0
+	local failed_count=0
+
+	for window_id in "${!windows[@]}"; do
+		if [[ "${source_sessions[$window_id]}" == "$destination" ]]; then
+			((skipped_count += 1))
+			continue
+		fi
+
+		if tmux move-window -d -a \
+			-s "$window_id" \
+			-t "=$destination:{end}"; then
+			((moved_count += 1))
+		else
+			((failed_count += 1))
+		fi
+	done
+
+	if [[ "$destination_type" == "new" ]]; then
+		if ((moved_count > 0)); then
+			tmux kill-window -t "$placeholder_window" 2>/dev/null || true
+		else
+			tmux kill-session -t "=$destination" 2>/dev/null || true
+		fi
+	fi
+
+	if ((failed_count > 0)); then
+		pause_message "Moved $moved_count window(s), skipped $skipped_count, failed $failed_count."
+	elif ((moved_count == 0)); then
+		pause_message "No windows moved; $skipped_count already belong to that session."
+	fi
+}
+
 while true; do
 	result="$(
 		build_tree |
@@ -101,8 +219,8 @@ while true; do
 				--delimiter="$TAB" \
 				--with-nth=4.. \
 				--prompt='TMUX > ' \
-				--header=$'ENTER open   TAB select\nCTRL-N new   CTRL-R rename\nCTRL-X delete selected   ESC close' \
-				--expect=enter,ctrl-n,ctrl-r,ctrl-x
+				--header=$'ENTER open   TAB select\nCTRL-N new   CTRL-R rename\nCTRL-T move   CTRL-X delete   ESC close' \
+				--expect=enter,ctrl-n,ctrl-r,ctrl-t,ctrl-x
 	)" || exit 0
 
 	key="$(printf '%s\n' "$result" | sed -n '1p')"
@@ -146,8 +264,7 @@ while true; do
 		[[ -z "$type" ]] && continue
 
 		if ((${#lines[@]} > 1)); then
-			printf 'Rename works on one item at a time. Press Enter to continue.'
-			IFS= read -r
+			pause_message 'Rename works on one item at a time.'
 			continue
 		fi
 
@@ -170,6 +287,10 @@ while true; do
 				tmux rename-window -t "$window_id" "$name"
 			fi
 		fi
+		;;
+
+	ctrl-t)
+		move_selected "${lines[@]}"
 		;;
 
 	ctrl-x)
